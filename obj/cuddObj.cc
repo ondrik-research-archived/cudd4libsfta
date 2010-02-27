@@ -183,14 +183,6 @@ DD::manager() const
 } // DD::manager
 
 
-inline DdNode *
-DD::getNode() const
-{
-    return node;
-
-} // DD::getNode
-
-
 int
 DD::nodeCount() const
 {
