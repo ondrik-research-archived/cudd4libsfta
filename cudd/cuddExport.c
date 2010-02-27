@@ -578,7 +578,7 @@ Cudd_DumpDot(
 	scan = nodelist[j];
 	while (scan != NULL) {
 	    if (st_is_member(visited,(char *) scan)) {
-		retval = fprintf(fp,"\"%p\" [label = \"%g\"];\n",
+		retval = fprintf(fp,"\"%p\" [label = \"%u\"];\n",
 		    (void *) ((mask & (ptrint) scan) / sizeof(DdNode)),
 		    cuddV(scan));
 		if (retval == EOF) goto failure;

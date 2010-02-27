@@ -3057,7 +3057,7 @@ dp2(
 #endif
     n = cuddT(g);
     if (cuddIsConstant(n)) {
-	(void) fprintf(dd->out,"T = %-9g\t",cuddV(n));
+	(void) fprintf(dd->out,"T = %u\t",cuddV(n));
 	T = 1;
     } else {
 #if SIZEOF_VOID_P == 8
@@ -3071,7 +3071,7 @@ dp2(
     n = cuddE(g);
     N = Cudd_Regular(n);
     if (cuddIsConstant(N)) {
-	(void) fprintf(dd->out,"E = %c%-9g\n",bang(n),cuddV(N));
+	(void) fprintf(dd->out,"E = %c%u\n",bang(n),cuddV(N));
 	E = 1;
     } else {
 #if SIZEOF_VOID_P == 8
@@ -3126,7 +3126,7 @@ ddPrintMintermAux(
 		else if (v == 1) (void) fprintf(dd->out,"1");
 		else (void) fprintf(dd->out,"-");
 	    }
-	    (void) fprintf(dd->out," % g\n", cuddV(node));
+	    (void) fprintf(dd->out," % u\n", cuddV(node));
 	}
     } else {
 	Nv  = cuddT(N);
