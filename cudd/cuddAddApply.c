@@ -147,6 +147,23 @@ Cudd_addApply(
 
 } /* end of Cudd_addApply */
 
+DdNode *
+Cudd_addApplyWithData(
+  DdManager * dd,
+  DD_AOPD op,
+  DdNode * f,
+  DdNode * g,
+	void * data)
+{
+    DdNode *res;
+
+    do {
+	dd->reordered = 0;
+	res = cuddAddApplyWithDataRecur(dd,op,f,g,data);
+    } while (dd->reordered == 1);
+    return(res);
+
+} /* end of Cudd_addApplyWithData */
 
 /**Function********************************************************************
 
@@ -872,6 +889,79 @@ cuddAddApplyRecur(
 
 } /* end of cuddAddApplyRecur */
 
+DdNode *
+cuddAddApplyWithDataRecur(
+  DdManager * dd,
+  DD_AOPD op,
+  DdNode * f,
+  DdNode * g,
+	void * data)
+{
+    DdNode *res,
+	   *fv, *fvn, *gv, *gvn,
+	   *T, *E;
+    unsigned int ford, gord;
+    unsigned int index;
+    DD_CTFP cacheOp;
+
+    /* Check terminal cases. Op may swap f and g to increase the
+     * cache hit rate.
+     */
+    statLine(dd);
+    res = (*op)(dd,&f,&g, data);
+    if (res != NULL) return(res);
+
+		// Cache checking disabled, because data might have changed
+    /* Check cache. */
+    //cacheOp = (DD_CTFP) op;
+    //res = cuddCacheLookup2(dd,cacheOp,f,g);
+    //if (res != NULL) return(res);
+
+    /* Recursive step. */
+    ford = cuddI(dd,f->index);
+    gord = cuddI(dd,g->index);
+    if (ford <= gord) {
+	index = f->index;
+	fv = cuddT(f);
+	fvn = cuddE(f);
+    } else {
+	index = g->index;
+	fv = fvn = f;
+    }
+    if (gord <= ford) {
+	gv = cuddT(g);
+	gvn = cuddE(g);
+    } else {
+	gv = gvn = g;
+    }
+
+    T = cuddAddApplyWithDataRecur(dd,op,fv,gv, data);
+    if (T == NULL) return(NULL);
+    cuddRef(T);
+
+    E = cuddAddApplyWithDataRecur(dd,op,fvn,gvn, data);
+    if (E == NULL) {
+	Cudd_RecursiveDeref(dd,T);
+	return(NULL);
+    }
+    cuddRef(E);
+
+    res = (T == E) ? T : cuddUniqueInter(dd,(int)index,T,E);
+    if (res == NULL) {
+	Cudd_RecursiveDeref(dd, T);
+	Cudd_RecursiveDeref(dd, E);
+	return(NULL);
+    }
+    cuddDeref(T);
+    cuddDeref(E);
+
+		// Cache is again disabled
+    /* Store result. */
+    //cuddCacheInsert2(dd,cacheOp,f,g,res);
+
+    return(res);
+
+} /* end of cuddAddApplyWithDataRecur */
 
 /**Function********************************************************************
 

@@ -314,6 +314,8 @@ typedef DdNode * (*DD_PRFP)(DdManager * , int, DdNode **, DdNode **,
 			    DdNode **);
 /* Type of apply operator. */
 typedef DdNode * (*DD_AOP)(DdManager *, DdNode **, DdNode **);
+/* Type of apply operator with data */
+typedef DdNode * (*DD_AOPD)(DdManager *, DdNode **, DdNode **, void *);
 /* Type of monadic apply operator. */
 typedef DdNode * (*DD_MAOP)(DdManager *, DdNode *);
 /* Types of cache tag functions. */
@@ -762,6 +764,7 @@ extern DdNode * Cudd_addExistAbstract (DdManager *manager, DdNode *f, DdNode *cu
 extern DdNode * Cudd_addUnivAbstract (DdManager *manager, DdNode *f, DdNode *cube);
 extern DdNode * Cudd_addOrAbstract (DdManager *manager, DdNode *f, DdNode *cube);
 extern DdNode * Cudd_addApply (DdManager *dd, DdNode * (*)(DdManager *, DdNode **, DdNode **), DdNode *f, DdNode *g);
+extern DdNode * Cudd_addApplyWithData (DdManager *dd, DdNode * (*)(DdManager *, DdNode **, DdNode **, void *), DdNode *f, DdNode *g, void *data);
 extern DdNode * Cudd_addPlus (DdManager *dd, DdNode **f, DdNode **g);
 extern DdNode * Cudd_addTimes (DdManager *dd, DdNode **f, DdNode **g);
 extern DdNode * Cudd_addThreshold (DdManager *dd, DdNode **f, DdNode **g);
