@@ -318,6 +318,8 @@ typedef DdNode * (*DD_AOP)(DdManager *, DdNode **, DdNode **);
 typedef DdNode * (*DD_AOPD)(DdManager *, DdNode **, DdNode **, void *);
 /* Type of monadic apply operator. */
 typedef DdNode * (*DD_MAOP)(DdManager *, DdNode *);
+/* Type of monadic apply operator with data. */
+typedef DdNode * (*DD_MAOPD)(DdManager *, DdNode *, void *);
 /* Types of cache tag functions. */
 typedef DdNode * (*DD_CTFP)(DdManager *, DdNode *, DdNode *);
 typedef DdNode * (*DD_CTFP1)(DdManager *, DdNode *);
@@ -782,6 +784,7 @@ extern DdNode * Cudd_addNor (DdManager *dd, DdNode **f, DdNode **g);
 extern DdNode * Cudd_addXor (DdManager *dd, DdNode **f, DdNode **g);
 extern DdNode * Cudd_addXnor (DdManager *dd, DdNode **f, DdNode **g);
 extern DdNode * Cudd_addMonadicApply (DdManager * dd, DdNode * (*op)(DdManager *, DdNode *), DdNode * f);
+extern DdNode * Cudd_addMonadicApplyWithData (DdManager * dd, DdNode * (*op)(DdManager *, DdNode *, void *), DdNode * f, void *);
 extern DdNode * Cudd_addLog (DdManager * dd, DdNode * f);
 extern DdNode * Cudd_addFindMax (DdManager *dd, DdNode *f);
 extern DdNode * Cudd_addFindMin (DdManager *dd, DdNode *f);

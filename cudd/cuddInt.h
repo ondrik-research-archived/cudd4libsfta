@@ -1021,6 +1021,7 @@ extern DdNode * cuddAddOrAbstractRecur (DdManager *manager, DdNode *f, DdNode *c
 extern DdNode * cuddAddApplyRecur (DdManager *dd, DdNode * (*)(DdManager *, DdNode **, DdNode **), DdNode *f, DdNode *g);
 extern DdNode * cuddAddApplyWithDataRecur (DdManager *dd, DdNode * (*)(DdManager *, DdNode **, DdNode **, void *), DdNode *f, DdNode *g, void *);
 extern DdNode * cuddAddMonadicApplyRecur (DdManager * dd, DdNode * (*op)(DdManager *, DdNode *), DdNode * f);
+extern DdNode * cuddAddMonadicApplyWithDataRecur (DdManager * dd, DdNode * (*op)(DdManager *, DdNode *, void *), DdNode * f, void *);
 extern DdNode * cuddAddScalarInverseRecur (DdManager *dd, DdNode *f, DdNode *epsilon);
 extern DdNode * cuddAddIteRecur (DdManager *dd, DdNode *f, DdNode *g, DdNode *h);
 extern DdNode * cuddAddCmplRecur (DdManager *dd, DdNode *f);

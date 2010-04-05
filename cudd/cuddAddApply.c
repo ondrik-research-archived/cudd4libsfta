@@ -772,6 +772,22 @@ Cudd_addMonadicApply(
 
 } /* end of Cudd_addMonadicApply */
 
+DdNode *
+Cudd_addMonadicApplyWithData(
+  DdManager * dd,
+  DD_MAOP op,
+  DdNode * f,
+	void * data)
+{
+    DdNode *res;
+
+    do {
+	dd->reordered = 0;
+	res = cuddAddMonadicApplyWithDataRecur(dd,op,f,data);
+    } while (dd->reordered == 1);
+    return(res);
+
+} /* end of Cudd_addMonadicApplyWithData */
 
 /**Function********************************************************************
 
@@ -1024,6 +1040,61 @@ cuddAddMonadicApplyRecur(
     return(res);
 
 } /* end of cuddAddMonadicApplyRecur */
+
+
+DdNode *
+cuddAddMonadicApplyWithDataRecur(
+  DdManager * dd,
+  DD_MAOPD op,
+  DdNode * f,
+	void * data)
+{
+    DdNode *res, *ft, *fe, *T, *E;
+    unsigned int index;
+
+    /* Check terminal cases. */
+    statLine(dd);
+    res = (*op)(dd,f);
+    if (res != NULL) return(res);
+
+
+		// Cache checking disabled, because data might have changed
+    /* Check cache. */
+    //res = cuddCacheLookup1(dd,op,f);
+    //if (res != NULL) return(res);
+
+    /* Recursive step. */
+    index = f->index;
+    ft = cuddT(f);
+    fe = cuddE(f);
+
+    T = cuddAddMonadicApplyWithDataRecur(dd,op,ft, data);
+    if (T == NULL) return(NULL);
+    cuddRef(T);
+
+    E = cuddAddMonadicApplyWithDataRecur(dd,op,fe, data);
+    if (E == NULL) {
+	Cudd_RecursiveDeref(dd,T);
+	return(NULL);
+    }
+    cuddRef(E);
+
+    res = (T == E) ? T : cuddUniqueInter(dd,(int)index,T,E);
+    if (res == NULL) {
+	Cudd_RecursiveDeref(dd, T);
+	Cudd_RecursiveDeref(dd, E);
+	return(NULL);
+    }
+    cuddDeref(T);
+    cuddDeref(E);
+
+		// Cache is again disabled
+    /* Store result. */
+    //cuddCacheInsert1(dd,op,f,res);
+
+    return(res);
+
+} /* end of cuddAddMonadicApplyWithDataRecur */
 
 
 /*---------------------------------------------------------------------------*/
