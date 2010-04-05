@@ -775,7 +775,7 @@ Cudd_addMonadicApply(
 DdNode *
 Cudd_addMonadicApplyWithData(
   DdManager * dd,
-  DD_MAOP op,
+  DD_MAOPD op,
   DdNode * f,
 	void * data)
 {
@@ -1054,7 +1054,7 @@ cuddAddMonadicApplyWithDataRecur(
 
     /* Check terminal cases. */
     statLine(dd);
-    res = (*op)(dd,f);
+    res = (*op)(dd,f, data);
     if (res != NULL) return(res);
 
 
