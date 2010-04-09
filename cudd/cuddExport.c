@@ -604,6 +604,280 @@ failure:
 } /* end of Cudd_DumpDot */
 
 
+int
+Cudd_DumpDotWithArbitrarySinkNodes(
+  DdManager * dd /* manager */,
+  int  n /* number of output nodes to be dumped */,
+  DdNode ** f /* array of output nodes to be dumped */,
+  char ** inames /* array of input names (or NULL) */,
+  char ** onames /* array of output names (or NULL) */,
+	char ** snames /* array of names of sink roots (or NULL) */,
+  FILE * fp /* pointer to the dump file */)
+{
+    DdNode	*support = NULL;
+    DdNode	*scan;
+    int		*sorted = NULL;
+    int		nvars = dd->size;
+    st_table	*visited = NULL;
+    st_generator *gen = NULL;
+    int		retval;
+    int		i, j;
+    int		slots;
+    DdNodePtr	*nodelist;
+    long	refAddr, diff, mask;
+
+    /* Build a bit array with the support of f. */
+    sorted = ALLOC(int,nvars);
+    if (sorted == NULL) {
+	dd->errorCode = CUDD_MEMORY_OUT;
+	goto failure;
+    }
+    for (i = 0; i < nvars; i++) sorted[i] = 0;
+
+    /* Take the union of the supports of each output function. */
+    support = Cudd_VectorSupport(dd,f,n);
+    if (support == NULL) goto failure;
+    cuddRef(support);
+    scan = support;
+    while (!cuddIsConstant(scan)) {
+	sorted[scan->index] = 1;
+	scan = cuddT(scan);
+    }
+    Cudd_RecursiveDeref(dd,support);
+    support = NULL; /* so that we do not try to free it in case of failure */
+
+    /* Initialize symbol table for visited nodes. */
+    visited = st_init_table(st_ptrcmp, st_ptrhash);
+    if (visited == NULL) goto failure;
+
+    /* Collect all the nodes of this DD in the symbol table. */
+    for (i = 0; i < n; i++) {
+	retval = cuddCollectNodes(Cudd_Regular(f[i]),visited);
+	if (retval == 0) goto failure;
+    }
+
+    /* Find how many most significant hex digits are identical
+    ** in the addresses of all the nodes. Build a mask based
+    ** on this knowledge, so that digits that carry no information
+    ** will not be printed. This is done in two steps.
+    **  1. We scan the symbol table to find the bits that differ
+    **     in at least 2 addresses.
+    **  2. We choose one of the possible masks. There are 8 possible
+    **     masks for 32-bit integer, and 16 possible masks for 64-bit
+    **     integers.
+    */
+
+    /* Find the bits that are different. */
+    refAddr = (long) Cudd_Regular(f[0]);
+    diff = 0;
+    gen = st_init_gen(visited);
+    if (gen == NULL) goto failure;
+    while (st_gen(gen, &scan, NULL)) {
+	diff |= refAddr ^ (long) scan;
+    }
+    st_free_gen(gen); gen = NULL;
+
+    /* Choose the mask. */
+    for (i = 0; (unsigned) i < 8 * sizeof(long); i += 4) {
+	mask = (1 << i) - 1;
+	if (diff <= mask) break;
+    }
+
+    /* Write the header and the global attributes. */
+    retval = fprintf(fp,"digraph \"DD\" {\n");
+    if (retval == EOF) return(0);
+    retval = fprintf(fp,
+	"size = \"7.5,10\"\ncenter = true;\nedge [dir = none];\n");
+    if (retval == EOF) return(0);
+
+    /* Write the input name subgraph by scanning the support array. */
+    retval = fprintf(fp,"{ node [shape = plaintext];\n");
+    if (retval == EOF) goto failure;
+    retval = fprintf(fp,"  edge [style = invis];\n");
+    if (retval == EOF) goto failure;
+    /* We use a name ("CONST NODES") with an embedded blank, because
+    ** it is unlikely to appear as an input name.
+    */
+    retval = fprintf(fp,"  \"CONST NODES\" [style = invis];\n");
+    if (retval == EOF) goto failure;
+    for (i = 0; i < nvars; i++) {
+	if (sorted[dd->invperm[i]]) {
+	    if (inames == NULL || inames[dd->invperm[i]] == NULL) {
+		retval = fprintf(fp,"\" %d \" -> ", dd->invperm[i]);
+	    } else {
+		retval = fprintf(fp,"\" %s \" -> ", inames[dd->invperm[i]]);
+	    }
+	    if (retval == EOF) goto failure;
+	}
+    }
+    retval = fprintf(fp,"\"CONST NODES\"; \n}\n");
+    if (retval == EOF) goto failure;
+
+    /* Write the output node subgraph. */
+    retval = fprintf(fp,"{ rank = same; node [shape = box]; edge [style = invis];\n");
+    if (retval == EOF) goto failure;
+    for (i = 0; i < n; i++) {
+	if (onames == NULL) {
+	    retval = fprintf(fp,"\"F%d\"", i);
+	} else {
+	    retval = fprintf(fp,"\"  %s  \"", onames[i]);
+	}
+	if (retval == EOF) goto failure;
+	if (i == n - 1) {
+	    retval = fprintf(fp,"; }\n");
+	} else {
+	    retval = fprintf(fp," -> ");
+	}
+	if (retval == EOF) goto failure;
+    }
+
+    /* Write rank info: All nodes with the same index have the same rank. */
+    for (i = 0; i < nvars; i++) {
+	if (sorted[dd->invperm[i]]) {
+	    retval = fprintf(fp,"{ rank = same; ");
+	    if (retval == EOF) goto failure;
+	    if (inames == NULL || inames[dd->invperm[i]] == NULL) {
+		retval = fprintf(fp,"\" %d \";\n", dd->invperm[i]);
+	    } else {
+		retval = fprintf(fp,"\" %s \";\n", inames[dd->invperm[i]]);
+	    }
+	    if (retval == EOF) goto failure;
+	    nodelist = dd->subtables[i].nodelist;
+	    slots = dd->subtables[i].slots;
+	    for (j = 0; j < slots; j++) {
+		scan = nodelist[j];
+		while (scan != NULL) {
+		    if (st_is_member(visited,(char *) scan)) {
+			retval = fprintf(fp,"\"%p\";\n",
+			    (void *) ((mask & (ptrint) scan) /
+			    sizeof(DdNode)));
+			if (retval == EOF) goto failure;
+		    }
+		    scan = scan->next;
+		}
+	    }
+	    retval = fprintf(fp,"}\n");
+	    if (retval == EOF) goto failure;
+	}
+    }
+
+    /* All constants have the same rank. */
+    retval = fprintf(fp,
+	"{ rank = same; \"CONST NODES\";\n{ node [shape = box]; ");
+    if (retval == EOF) goto failure;
+    nodelist = dd->constants.nodelist;
+    slots = dd->constants.slots;
+    for (j = 0; j < slots; j++) {
+	scan = nodelist[j];
+	while (scan != NULL) {
+	    if (st_is_member(visited,(char *) scan)) {
+		retval = fprintf(fp,"\"%p\";\n",
+		    (void *) ((mask & (ptrint) scan) / sizeof(DdNode)));
+		if (retval == EOF) goto failure;
+	    }
+	    scan = scan->next;
+	}
+    }
+    retval = fprintf(fp,"}\n}\n");
+    if (retval == EOF) goto failure;
+
+    /* Write edge info. */
+    /* Edges from the output nodes. */
+    for (i = 0; i < n; i++) {
+	if (onames == NULL) {
+	    retval = fprintf(fp,"\"F%d\"", i);
+	} else {
+	    retval = fprintf(fp,"\"  %s  \"", onames[i]);
+	}
+	if (retval == EOF) goto failure;
+	/* Account for the possible complement on the root. */
+	if (Cudd_IsComplement(f[i])) {
+	    retval = fprintf(fp," -> \"%p\" [style = dotted];\n",
+		(void *) ((mask & (ptrint) f[i]) / sizeof(DdNode)));
+	} else {
+	    retval = fprintf(fp," -> \"%p\" [style = solid];\n",
+		(void *) ((mask & (ptrint) f[i]) / sizeof(DdNode)));
+	}
+	if (retval == EOF) goto failure;
+    }
+
+    /* Edges from internal nodes. */
+    for (i = 0; i < nvars; i++) {
+	if (sorted[dd->invperm[i]]) {
+	    nodelist = dd->subtables[i].nodelist;
+	    slots = dd->subtables[i].slots;
+	    for (j = 0; j < slots; j++) {
+		scan = nodelist[j];
+		while (scan != NULL) {
+		    if (st_is_member(visited,(char *) scan)) {
+			retval = fprintf(fp,
+			    "\"%p\" -> \"%p\";\n",
+			    (void *) ((mask & (ptrint) scan) /
+			    sizeof(DdNode)),
+			    (void *) ((mask & (ptrint) cuddT(scan)) /
+			    sizeof(DdNode)));
+			if (retval == EOF) goto failure;
+			if (Cudd_IsComplement(cuddE(scan))) {
+			    retval = fprintf(fp,
+				"\"%p\" -> \"%p\" [style = dotted];\n",
+				(void *) ((mask & (ptrint) scan) /
+				sizeof(DdNode)),
+				(void *) ((mask & (ptrint) cuddE(scan)) /
+				sizeof(DdNode)));
+			} else {
+			    retval = fprintf(fp,
+				"\"%p\" -> \"%p\" [style = dashed];\n",
+				(void *) ((mask & (ptrint) scan) /
+				sizeof(DdNode)),
+				(void *) ((mask & (ptrint) cuddE(scan)) /
+				sizeof(DdNode)));
+			}
+			if (retval == EOF) goto failure;
+		    }
+		    scan = scan->next;
+		}
+	    }
+	}
+    }
+
+    /* Write constant labels. */
+    nodelist = dd->constants.nodelist;
+    slots = dd->constants.slots;
+    for (j = 0; j < slots; j++) {
+	scan = nodelist[j];
+	while (scan != NULL) {
+	    if (st_is_member(visited,(char *) scan)) {
+				if (snames == NULL || inames[cuddV(scan)] == NULL) {
+			retval = fprintf(fp,"\"%p\" [label = \"%u\"];\n",
+			    (void *) ((mask & (ptrint) scan) / sizeof(DdNode)),
+			    cuddV(scan));
+				} else {
+			retval = fprintf(fp,"\"%p\" [label = \"%s\"];\n",
+			    (void *) ((mask & (ptrint) scan) / sizeof(DdNode)),
+			    snames[cuddV(scan)]);
+				}
+		if (retval == EOF) goto failure;
+	    }
+	    scan = scan->next;
+	}
+    }
+
+    /* Write trailer and return. */
+    retval = fprintf(fp,"}\n");
+    if (retval == EOF) goto failure;
+
+    st_free_table(visited);
+    FREE(sorted);
+    return(1);
+
+failure:
+    if (sorted != NULL) FREE(sorted);
+    if (support != NULL) Cudd_RecursiveDeref(dd,support);
+    if (visited != NULL) st_free_table(visited);
+    return(0);
+
+} /* end of Cudd_DumpDotWithArbitrarySinkNodes */
+
 /**Function********************************************************************
 
   Synopsis    [Writes a daVinci file representing the argument BDDs.]
