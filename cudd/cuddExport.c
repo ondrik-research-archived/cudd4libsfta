@@ -847,7 +847,7 @@ Cudd_DumpDotWithArbitrarySinkNodes(
 	scan = nodelist[j];
 	while (scan != NULL) {
 	    if (st_is_member(visited,(char *) scan)) {
-				if (snames == NULL || inames[cuddV(scan)] == NULL) {
+				if (snames == NULL || snames[cuddV(scan)] == NULL) {
 			retval = fprintf(fp,"\"%p\" [label = \"%u\"];\n",
 			    (void *) ((mask & (ptrint) scan) / sizeof(DdNode)),
 			    cuddV(scan));
