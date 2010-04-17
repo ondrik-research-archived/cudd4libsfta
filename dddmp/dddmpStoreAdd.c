@@ -904,9 +904,9 @@ NodeTextStoreAdd (
      */
 
     if ((varnames != NULL) || (outids != NULL)) {
-      retValue = fprintf (fp, "%d T %g 0 0\n",idf,Cudd_V(f));
+      retValue = fprintf (fp, "%d T %d 0 0\n",idf,Cudd_V(f));
     } else {
-      retValue = fprintf (fp, "%d %g 0 0\n",idf, Cudd_V(f));
+      retValue = fprintf (fp, "%d %d 0 0\n",idf, Cudd_V(f));
     }
 
     if (retValue == EOF) {
