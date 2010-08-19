@@ -1466,10 +1466,6 @@ cuddUniqueConst(
     split.value = value;
 
     pos = ddHash(split.bits[0], split.bits[1], unique->constants.shift);
-		printf("split.bits[0]: %d\n", split.bits[0]);
-		printf("split.bits[1]: %d\n", split.bits[1]);
-		printf("unique->constants.shift: %d\n", unique->constants.shift);
-		printf("pos: %d\n", pos);
     nodelist = unique->constants.nodelist;
     looking = nodelist[pos];
 
