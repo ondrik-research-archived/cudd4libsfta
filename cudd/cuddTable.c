@@ -1441,6 +1441,10 @@ cuddUniqueConst(
     DdNode *looking;
     hack split;
 
+		/* Fill in the hack union at first */
+		split.bits[0] = 0;
+		split.bits[1] = 0;
+
 #ifdef DD_UNIQUE_PROFILE
     unique->uniqueLookUps++;
 #endif
@@ -1462,6 +1466,10 @@ cuddUniqueConst(
     split.value = value;
 
     pos = ddHash(split.bits[0], split.bits[1], unique->constants.shift);
+		printf("split.bits[0]: %d\n", split.bits[0]);
+		printf("split.bits[1]: %d\n", split.bits[1]);
+		printf("unique->constants.shift: %d\n", unique->constants.shift);
+		printf("pos: %d\n", pos);
     nodelist = unique->constants.nodelist;
     looking = nodelist[pos];
 
