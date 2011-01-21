@@ -316,6 +316,10 @@ typedef DdNode * (*DD_PRFP)(DdManager * , int, DdNode **, DdNode **,
 typedef DdNode * (*DD_AOP)(DdManager *, DdNode **, DdNode **);
 /* Type of apply operator with data */
 typedef DdNode * (*DD_AOPD)(DdManager *, DdNode **, DdNode **, void *);
+/* Type of ternary apply operator. */
+typedef DdNode * (*DD_TAOP)(DdManager *, DdNode **, DdNode **, DdNode **);
+/* Type of ternary apply operator with data */
+typedef DdNode * (*DD_TAOPD)(DdManager *, DdNode **, DdNode **, DdNode**, void *);
 /* Type of monadic apply operator. */
 typedef DdNode * (*DD_MAOP)(DdManager *, DdNode *);
 /* Type of monadic apply operator with data. */
@@ -767,6 +771,8 @@ extern DdNode * Cudd_addUnivAbstract (DdManager *manager, DdNode *f, DdNode *cub
 extern DdNode * Cudd_addOrAbstract (DdManager *manager, DdNode *f, DdNode *cube);
 extern DdNode * Cudd_addApply (DdManager *dd, DdNode * (*)(DdManager *, DdNode **, DdNode **), DdNode *f, DdNode *g);
 extern DdNode * Cudd_addApplyWithData (DdManager *dd, DdNode * (*)(DdManager *, DdNode **, DdNode **, void *), DdNode *f, DdNode *g, void *data);
+extern DdNode * Cudd_addTernaryApply (DdManager *dd, DdNode * (*)(DdManager *, DdNode **, DdNode **, DdNode**), DdNode *f, DdNode *g, DdNode* h);
+extern DdNode * Cudd_addTernaryApplyWithData (DdManager *dd, DdNode * (*)(DdManager *, DdNode **, DdNode **, DdNode**, void *), DdNode *f, DdNode *g, DdNode* h, void *data);
 extern DdNode * Cudd_addPlus (DdManager *dd, DdNode **f, DdNode **g);
 extern DdNode * Cudd_addTimes (DdManager *dd, DdNode **f, DdNode **g);
 extern DdNode * Cudd_addThreshold (DdManager *dd, DdNode **f, DdNode **g);

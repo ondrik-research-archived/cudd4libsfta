@@ -165,6 +165,44 @@ Cudd_addApplyWithData(
 
 } /* end of Cudd_addApplyWithData */
 
+DdNode *
+Cudd_addTernaryApply(
+  DdManager * dd,
+  DD_TAOP op,
+  DdNode * f,
+  DdNode * g,
+	DdNode * h)
+{
+    DdNode *res;
+
+    do {
+	dd->reordered = 0;
+	res = cuddAddTernaryApplyRecur(dd,op,f,g,h);
+    } while (dd->reordered == 1);
+    return(res);
+
+} /* end of Cudd_addTernaryApply */
+
+
+DdNode *
+Cudd_addTernaryApplyWithData(
+  DdManager * dd,
+  DD_TAOPD op,
+  DdNode * f,
+  DdNode * g,
+	DdNode * h,
+	void * data)
+{
+    DdNode *res;
+
+    do {
+	dd->reordered = 0;
+	res = cuddAddTernaryApplyWithDataRecur(dd,op,f,g,h,data);
+    } while (dd->reordered == 1);
+    return(res);
+
+} /* end of Cudd_addTernaryApplyWithData */
+
 /**Function********************************************************************
 
   Synopsis    [Integer and floating point addition.]
@@ -978,6 +1016,187 @@ cuddAddApplyWithDataRecur(
     return(res);
 
 } /* end of cuddAddApplyWithDataRecur */
+
+/**Function********************************************************************
+
+  Synopsis    [Performs the recursive step of Cudd_addTernaryApply.]
+
+  Description [Performs the recursive step of Cudd_addTernaryApply. Returns a
+  pointer to the result if successful; NULL otherwise.]
+
+  SideEffects [None]
+
+  SeeAlso     [cuddAddApplyRecur]
+
+******************************************************************************/
+DdNode *
+cuddAddTernaryApplyRecur(
+  DdManager * dd,
+  DD_TAOP op,
+  DdNode * f,
+  DdNode * g,
+  DdNode * h)
+{
+    DdNode *res,
+	   *fv, *fvn, *gv, *gvn, *hv, *hvn,
+	   *T, *E;
+    unsigned int ford, gord, hord;
+    unsigned int index;
+    DD_CTFP cacheOp;
+
+    /* Check terminal cases. Op may swap f and g to increase the
+     * cache hit rate.
+     */
+    statLine(dd);
+    res = (*op)(dd,&f,&g,&h);
+    if (res != NULL) return(res);
+
+    /* Check cache. */
+//    cacheOp = (DD_CTFP) op;
+//    res = cuddCacheLookup2(dd,cacheOp,f,g);
+//    if (res != NULL) return(res);
+
+    /* Recursive step. */
+    ford = cuddI(dd,f->index);
+    gord = cuddI(dd,g->index);
+    hord = cuddI(dd,h->index);
+
+    if ((ford <= gord) && (ford <= hord)) {
+	index = f->index;
+	fv = cuddT(f);
+	fvn = cuddE(f);
+    } else {
+	fv = fvn = f;
+    }
+
+    if ((gord <= ford) && (gord <= hord)) {
+	index = g->index;
+	gv = cuddT(g);
+	gvn = cuddE(g);
+    } else {
+	gv = gvn = g;
+    }
+
+    if ((hord <= ford) && (hord <= gord)) {
+	index = h->index;
+	hv = cuddT(h);
+	hvn = cuddE(h);
+    } else {
+	hv = hvn = h;
+    }
+
+    T = cuddAddTernaryApplyRecur(dd,op,fv,gv,hv);
+    if (T == NULL) return(NULL);
+    cuddRef(T);
+
+    E = cuddAddTernaryApplyRecur(dd,op,fvn,gvn,hvn);
+    if (E == NULL) {
+	Cudd_RecursiveDeref(dd,T);
+	return(NULL);
+    }
+    cuddRef(E);
+
+    res = (T == E) ? T : cuddUniqueInter(dd,(int)index,T,E);
+    if (res == NULL) {
+	Cudd_RecursiveDeref(dd, T);
+	Cudd_RecursiveDeref(dd, E);
+	return(NULL);
+    }
+    cuddDeref(T);
+    cuddDeref(E);
+
+    /* Store result. */
+//    cuddCacheInsert2(dd,cacheOp,f,g,res);
+
+    return(res);
+
+} /* end of cuddAddTernaryApplyRecur */
+
+
+DdNode *
+cuddAddTernaryApplyWithDataRecur(
+  DdManager * dd,
+  DD_TAOPD op,
+  DdNode * f,
+  DdNode * g,
+  DdNode * h,
+  void * data)
+{
+    DdNode *res,
+	   *fv, *fvn, *gv, *gvn, *hv, *hvn,
+	   *T, *E;
+    unsigned int ford, gord, hord;
+    unsigned int index;
+    DD_CTFP cacheOp;
+
+    /* Check terminal cases. Op may swap f and g to increase the
+     * cache hit rate.
+     */
+    statLine(dd);
+    res = (*op)(dd,&f,&g,&h, data);
+    if (res != NULL) return(res);
+
+    /* Check cache. */
+//    cacheOp = (DD_CTFP) op;
+//    res = cuddCacheLookup2(dd,cacheOp,f,g);
+//    if (res != NULL) return(res);
+
+    /* Recursive step. */
+    ford = cuddI(dd,f->index);
+    gord = cuddI(dd,g->index);
+    hord = cuddI(dd,h->index);
+
+    if ((ford <= gord) && (ford <= hord)) {
+	index = f->index;
+	fv = cuddT(f);
+	fvn = cuddE(f);
+    } else {
+	fv = fvn = f;
+    }
+
+    if ((gord <= ford) && (gord <= hord)) {
+	index = g->index;
+	gv = cuddT(g);
+	gvn = cuddE(g);
+    } else {
+	gv = gvn = g;
+    }
+
+    if ((hord <= ford) && (hord <= gord)) {
+	index = h->index;
+	hv = cuddT(h);
+	hvn = cuddE(h);
+    } else {
+	hv = hvn = h;
+    }
+
+    T = cuddAddTernaryApplyWithDataRecur(dd,op,fv,gv,hv, data);
+    if (T == NULL) return(NULL);
+    cuddRef(T);
+
+    E = cuddAddTernaryApplyWithDataRecur(dd,op,fvn,gvn,hvn, data);
+    if (E == NULL) {
+	Cudd_RecursiveDeref(dd,T);
+	return(NULL);
+    }
+    cuddRef(E);
+
+    res = (T == E) ? T : cuddUniqueInter(dd,(int)index,T,E);
+    if (res == NULL) {
+	Cudd_RecursiveDeref(dd, T);
+	Cudd_RecursiveDeref(dd, E);
+	return(NULL);
+    }
+    cuddDeref(T);
+    cuddDeref(E);
+
+    /* Store result. */
+//    cuddCacheInsert2(dd,cacheOp,f,g,res);
+
+    return(res);
+
+} /* end of cuddAddTernaryApplyWithDataRecur */
+
 
 /**Function********************************************************************
 
