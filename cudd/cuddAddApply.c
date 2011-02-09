@@ -142,10 +142,17 @@ Cudd_addApply(
     do {
 	dd->reordered = 0;
 	res = cuddAddApplyRecur(dd,op,f,g);
+	assert(dd->reordered == 0);
     } while (dd->reordered == 1);
     return(res);
 
 } /* end of Cudd_addApply */
+
+
+// Global bloody counters
+static ptruint global_bloody_counter_unary = 0;
+static ptruint global_bloody_counter_binary = 0;
+static ptruint global_bloody_counter_ternary = 0;
 
 DdNode *
 Cudd_addApplyWithData(
@@ -160,7 +167,9 @@ Cudd_addApplyWithData(
     do {
 	dd->reordered = 0;
 	res = cuddAddApplyWithDataRecur(dd,op,f,g,data);
+	assert(dd->reordered == 0);
     } while (dd->reordered == 1);
+		++global_bloody_counter_binary;
     return(res);
 
 } /* end of Cudd_addApplyWithData */
@@ -178,6 +187,7 @@ Cudd_addTernaryApply(
     do {
 	dd->reordered = 0;
 	res = cuddAddTernaryApplyRecur(dd,op,f,g,h);
+	assert(dd->reordered == 0);
     } while (dd->reordered == 1);
     return(res);
 
@@ -198,7 +208,9 @@ Cudd_addTernaryApplyWithData(
     do {
 	dd->reordered = 0;
 	res = cuddAddTernaryApplyWithDataRecur(dd,op,f,g,h,data);
+	assert(dd->reordered == 0);
     } while (dd->reordered == 1);
+		++global_bloody_counter_ternary;
     return(res);
 
 } /* end of Cudd_addTernaryApplyWithData */
@@ -805,6 +817,7 @@ Cudd_addMonadicApply(
     do {
 	dd->reordered = 0;
 	res = cuddAddMonadicApplyRecur(dd,op,f);
+	assert(dd->reordered == 0);
     } while (dd->reordered == 1);
     return(res);
 
@@ -822,7 +835,9 @@ Cudd_addMonadicApplyWithData(
     do {
 	dd->reordered = 0;
 	res = cuddAddMonadicApplyWithDataRecur(dd,op,f,data);
+	assert(dd->reordered == 0);
     } while (dd->reordered == 1);
+		++global_bloody_counter_unary;
     return(res);
 
 } /* end of Cudd_addMonadicApplyWithData */
@@ -965,11 +980,10 @@ cuddAddApplyWithDataRecur(
     res = (*op)(dd,&f,&g, data);
     if (res != NULL) return(res);
 
-		// Cache checking disabled, because data might have changed
     /* Check cache. */
-    //cacheOp = (DD_CTFP) op;
-    //res = cuddCacheLookup2(dd,cacheOp,f,g);
-    //if (res != NULL) return(res);
+    cacheOp = (DD_CTFP) global_bloody_counter_binary;
+    res = cuddCacheLookup2(dd,cacheOp,f,g);
+    if (res != NULL) return(res);
 
     /* Recursive step. */
     ford = cuddI(dd,f->index);
@@ -1009,9 +1023,8 @@ cuddAddApplyWithDataRecur(
     cuddDeref(T);
     cuddDeref(E);
 
-		// Cache is again disabled
     /* Store result. */
-    //cuddCacheInsert2(dd,cacheOp,f,g,res);
+    cuddCacheInsert2(dd,cacheOp,f,g,res);
 
     return(res);
 
@@ -1052,9 +1065,9 @@ cuddAddTernaryApplyRecur(
     if (res != NULL) return(res);
 
     /* Check cache. */
-//    cacheOp = (DD_CTFP) op;
-//    res = cuddCacheLookup2(dd,cacheOp,f,g);
-//    if (res != NULL) return(res);
+    cacheOp = (DD_CTFP) op;
+    res = cuddCacheLookup(dd,(ptruint)cacheOp,f,g,h);
+    if (res != NULL) return(res);
 
     /* Recursive step. */
     ford = cuddI(dd,f->index);
@@ -1106,7 +1119,7 @@ cuddAddTernaryApplyRecur(
     cuddDeref(E);
 
     /* Store result. */
-//    cuddCacheInsert2(dd,cacheOp,f,g,res);
+    cuddCacheInsert(dd,(ptruint)cacheOp,f,g,h,res);
 
     return(res);
 
@@ -1127,7 +1140,7 @@ cuddAddTernaryApplyWithDataRecur(
 	   *T, *E;
     unsigned int ford, gord, hord;
     unsigned int index;
-    DD_CTFP cacheOp;
+    ptruint cacheOp;
 
     /* Check terminal cases. Op may swap f and g to increase the
      * cache hit rate.
@@ -1137,9 +1150,9 @@ cuddAddTernaryApplyWithDataRecur(
     if (res != NULL) return(res);
 
     /* Check cache. */
-//    cacheOp = (DD_CTFP) op;
-//    res = cuddCacheLookup2(dd,cacheOp,f,g);
-//    if (res != NULL) return(res);
+    cacheOp = (ptruint)global_bloody_counter_ternary;
+    res = cuddCacheLookup(dd,cacheOp,f,g,h);
+    if (res != NULL) return(res);
 
     /* Recursive step. */
     ford = cuddI(dd,f->index);
@@ -1191,7 +1204,7 @@ cuddAddTernaryApplyWithDataRecur(
     cuddDeref(E);
 
     /* Store result. */
-//    cuddCacheInsert2(dd,cacheOp,f,g,res);
+    cuddCacheInsert(dd,cacheOp,f,g,h,res);
 
     return(res);
 
@@ -1277,10 +1290,9 @@ cuddAddMonadicApplyWithDataRecur(
     if (res != NULL) return(res);
 
 
-		// Cache checking disabled, because data might have changed
     /* Check cache. */
-    //res = cuddCacheLookup1(dd,op,f);
-    //if (res != NULL) return(res);
+    res = cuddCacheLookup1(dd,(DD_MAOP)global_bloody_counter_unary,f);
+    if (res != NULL) return(res);
 
     /* Recursive step. */
     index = f->index;
@@ -1307,9 +1319,8 @@ cuddAddMonadicApplyWithDataRecur(
     cuddDeref(T);
     cuddDeref(E);
 
-		// Cache is again disabled
     /* Store result. */
-    //cuddCacheInsert1(dd,op,f,res);
+    cuddCacheInsert1(dd,(DD_MAOP)global_bloody_counter_unary,f,res);
 
     return(res);
 
